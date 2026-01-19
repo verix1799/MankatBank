@@ -17,7 +17,7 @@ export const getAccounts = async ({ userId }: any = {}) => {
       currentBalance: a.balance,
       institutionId: "mankatbank",
       name: `${a.ownerName}'s Account`,
-      officialName: "MankatBank Account",
+      officialName: "Plant Pot’s Bank Account",
       mask: String(a.id).padStart(4, "0"),
       type: "depository",
       subtype: "checking",
@@ -67,7 +67,7 @@ export const getAccount = async ({ appwriteItemId }: any) => {
       currentBalance: account.balance,
       institutionId: "mankatbank",
       name: `${account.ownerName}'s Account`,
-      officialName: "MankatBank Account",
+      officialName: "Plant Pot’s Bank Account",
       mask: String(account.id).padStart(4, "0"),
       type: "depository",
       subtype: "checking",
@@ -116,5 +116,21 @@ export const transferFunds = async ({
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ fromId, toId, amount }),
+  });
+};
+
+export const deposit = async (accountId: number, amount: number) => {
+  await apiJsonNoBody(`/accounts/${accountId}/deposit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ amount }),
+  });
+};
+
+export const withdraw = async (accountId: number, amount: number) => {
+  await apiJsonNoBody(`/accounts/${accountId}/withdraw`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ amount }),
   });
 };
