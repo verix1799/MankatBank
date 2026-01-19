@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input';
 const MyBanks = () => {
   const [user, setUser] = useState<User | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [accountsError, setAccountsError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeAction, setActiveAction] = useState<{
     accountId: string;
     type: "deposit" | "withdraw";
@@ -29,6 +31,7 @@ const MyBanks = () => {
   const loadAccounts = async () => {
     const accountsResponse = await getAccounts();
     setAccounts(accountsResponse?.data ?? []);
+    setAccountsError(accountsResponse?.error ?? null);
   };
 
   useEffect(() => {
@@ -38,9 +41,17 @@ const MyBanks = () => {
       const accountsResponse = await getAccounts();
       if (!isActive) return;
       setAccounts(accountsResponse?.data ?? []);
+      setAccountsError(accountsResponse?.error ?? null);
+      setIsLoading(false);
     };
 
-    load().catch((error) => console.error("Failed to load accounts:", error));
+    load().catch((error) => {
+      console.error("Failed to load accounts:", error);
+      if (isActive) {
+        setAccountsError("Unable to load accounts. Please try again.");
+        setIsLoading(false);
+      }
+    });
 
     return () => {
       isActive = false;
@@ -107,6 +118,17 @@ const MyBanks = () => {
           <h2 className="header-2">
             Your cards
           </h2>
+          {isLoading && (
+            <p className="text-14 text-gray-500">Loading accounts...</p>
+          )}
+          {!isLoading && accountsError && (
+            <p className="text-14 text-red-500">{accountsError}</p>
+          )}
+          {!isLoading && !accountsError && accounts.length === 0 && (
+            <p className="text-14 text-gray-500">
+              No accounts found. Create one in the backend to see it here.
+            </p>
+          )}
           <div className="flex flex-wrap gap-6">
             {accounts.map((a: Account) => (
               <div key={a.id} className="flex flex-col gap-2">

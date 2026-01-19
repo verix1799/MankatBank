@@ -33,7 +33,12 @@ export const getAccounts = async ({ userId }: any = {}) => {
   } catch (error) {
     console.error("Error getting accounts from Spring:", error);
     // Return an empty state instead of crashing the UI
-    return parseStringify({ data: [], totalBanks: 0, totalCurrentBalance: 0 });
+    return parseStringify({
+      data: [],
+      totalBanks: 0,
+      totalCurrentBalance: 0,
+      error: "Unable to load accounts. Please verify your session and API access.",
+    });
   }
 };
 
