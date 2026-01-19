@@ -1,14 +1,34 @@
+"use client";
+
 import BankCard from '@/components/BankCard';
 import HeaderBox from '@/components/HeaderBox'
 import { getAccounts } from '@/lib/actions/bank.actions';
 import { getLoggedInUser } from '@/lib/actions/user.actions';
-import React from 'react'
+import { useEffect, useState } from 'react';
 
-const MyBanks = async () => {
-  const loggedIn = await getLoggedInUser();
-  const accounts = await getAccounts({ 
-    userId: loggedIn.$id 
-  })
+const MyBanks = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+
+  useEffect(() => {
+    setUser(getLoggedInUser());
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadAccounts = async () => {
+      const accountsResponse = await getAccounts();
+      if (!isActive) return;
+      setAccounts(accountsResponse?.data ?? []);
+    };
+
+    loadAccounts().catch((error) => console.error("Failed to load accounts:", error));
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   return (
     <section className='flex'>
@@ -23,11 +43,11 @@ const MyBanks = async () => {
             Your cards
           </h2>
           <div className="flex flex-wrap gap-6">
-            {accounts && accounts.data.map((a: Account) => (
+            {accounts.map((a: Account) => (
               <BankCard 
-                key={accounts.id}
+                key={a.id}
                 account={a}
-                userName={loggedIn?.firstName}
+                userName={user?.firstName}
               />
             ))}
           </div>
