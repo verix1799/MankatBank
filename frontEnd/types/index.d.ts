@@ -26,20 +26,21 @@ declare type LoginUser = {
 };
 
 declare type User = {
-  $id: string;
-  email: string;
-  userId: string;
-  dwollaCustomerUrl: string;
-  dwollaCustomerId: string;
-  firstName: string;
-  lastName: string;
-  name: string;
-  address1: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  dateOfBirth: string;
-  ssn: string;
+  email?: string;
+  fullName?: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  $id?: string;
+  userId?: string;
+  dwollaCustomerUrl?: string;
+  dwollaCustomerId?: string;
+  address1?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  dateOfBirth?: string;
+  ssn?: string;
 };
 
 declare type NewUserParams = {
@@ -157,7 +158,7 @@ declare interface HeaderBoxProps {
 }
 
 declare interface MobileNavProps {
-  user: User;
+  user?: User;
 }
 
 declare interface PageHeaderProps {
@@ -210,18 +211,18 @@ declare interface TotalBalanceBoxProps {
 }
 
 declare interface FooterProps {
-  user: User;
+  user?: User;
   type?: 'mobile' | 'desktop'
 }
 
 declare interface RightSidebarProps {
-  user: User;
+  user?: User;
   transactions: Transaction[];
   banks: Bank[] & Account[];
 }
 
 declare interface SiderbarProps {
-  user: User;
+  user?: User;
 }
 
 declare interface RecentTransactionsProps {
@@ -297,6 +298,7 @@ declare interface getTransactionsByBankIdProps {
 declare interface signInProps {
   email: string;
   password: string;
+  fullName?: string;
 }
 
 declare interface getUserInfoProps {
