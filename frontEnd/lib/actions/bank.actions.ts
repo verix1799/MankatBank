@@ -1,4 +1,4 @@
-import { apiJson } from "@/lib/api";
+import { apiJson, apiJsonNoBody } from "@/lib/api";
 import { parseStringify } from "../utils";
 
 // This UI expects "accounts summary" shaped like:
@@ -101,4 +101,20 @@ export const getAccount = async ({ appwriteItemId }: any) => {
     console.error("Error getting account from Spring:", error);
     return parseStringify({ data: null, transactions: [] });
   }
+};
+
+export const transferFunds = async ({
+  fromId,
+  toId,
+  amount,
+}: {
+  fromId: number;
+  toId: number;
+  amount: number;
+}) => {
+  await apiJsonNoBody("/accounts/transfer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fromId, toId, amount }),
+  });
 };
