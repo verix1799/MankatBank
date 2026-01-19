@@ -1,22 +1,15 @@
-"use server";
-
+import { apiJson } from "@/lib/api";
 import { parseStringify } from "../utils";
-
-const API_BASE =
-  process.env.SPRING_API_BASE_URL?.replace(/\/+$/, "") || "http://localhost:8080";
 
 // This UI expects "accounts summary" shaped like:
 // { data: AccountUI[], totalBanks: number, totalCurrentBalance: number }
-export const getAccounts = async ({ userId }: any) => {
+export const getAccounts = async ({ userId }: any = {}) => {
   try {
-    const res = await fetch(`${API_BASE}/accounts`, { cache: "no-store" });
-    if (!res.ok) throw new Error(`Spring /accounts failed: ${res.status}`);
-
-    const accounts = (await res.json()) as Array<{
+    const accounts = await apiJson<Array<{
       id: number;
       ownerName: string;
       balance: number;
-    }>;
+    }>>("/accounts", { cache: "no-store" });
 
     const data = accounts.map((a) => ({
       id: String(a.id),
@@ -53,21 +46,20 @@ export const getAccount = async ({ appwriteItemId }: any) => {
     const id = Number(idStr);
     if (!Number.isFinite(id)) throw new Error("Invalid account id");
 
-    const accRes = await fetch(`${API_BASE}/accounts/${id}`, { cache: "no-store" });
-    if (!accRes.ok) throw new Error(`Spring /accounts/${id} failed: ${accRes.status}`);
-
-    const account = (await accRes.json()) as {
+    const account = await apiJson<{
       id: number;
       ownerName: string;
       balance: number;
-    };
+    }>(`/accounts/${id}`, { cache: "no-store" });
 
-    const txRes = await fetch(`${API_BASE}/accounts/${id}/transactions`, {
-      cache: "no-store",
-    });
-
-    // If transactions endpoint doesn't exist yet, keep UI alive
-    const txs: Array<any> = txRes.ok ? await txRes.json() : [];
+    let txs: Array<any> = [];
+    try {
+      txs = await apiJson<Array<any>>(`/accounts/${id}/transactions`, {
+        cache: "no-store",
+      });
+    } catch (error) {
+      console.warn("Transactions endpoint unavailable:", error);
+    }
 
     const uiAccount = {
       id: String(account.id),
