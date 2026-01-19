@@ -7,12 +7,9 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
-import { createTransfer } from "@/lib/actions/dwolla.actions";
-import { createTransaction } from "@/lib/actions/transaction.actions";
-import { getBank, getBankByAccountId } from "@/lib/actions/user.actions";
-import { decryptId } from "@/lib/utils";
+import { transferFunds } from "@/lib/actions/bank.actions";
 
-import { BankDropdown } from "./BankDropdown";
+import BankDropdown from "./BankDropdown";
 import { Button } from "./ui/button";
 import {
   Form,
@@ -37,6 +34,8 @@ const formSchema = z.object({
 const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [statusType, setStatusType] = useState<"success" | "error" | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -51,43 +50,53 @@ const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
 
   const submit = async (data: z.infer<typeof formSchema>) => {
     setIsLoading(true);
+    setStatusMessage(null);
+    setStatusType(null);
 
     try {
-      const receiverAccountId = decryptId(data.sharableId);
-      const receiverBank = await getBankByAccountId({
-        accountId: receiverAccountId,
-      });
-      const senderBank = await getBank({ documentId: data.senderBank });
-
-      const transferParams = {
-        sourceFundingSourceUrl: senderBank.fundingSourceUrl,
-        destinationFundingSourceUrl: receiverBank.fundingSourceUrl,
-        amount: data.amount,
-      };
-      // create transfer
-      const transfer = await createTransfer(transferParams);
-
-      // create transfer transaction
-      if (transfer) {
-        const transaction = {
-          name: data.name,
-          amount: data.amount,
-          senderId: senderBank.userId.$id,
-          senderBankId: senderBank.$id,
-          receiverId: receiverBank.userId.$id,
-          receiverBankId: receiverBank.$id,
-          email: data.email,
-        };
-
-        const newTransaction = await createTransaction(transaction);
-
-        if (newTransaction) {
-          form.reset();
-          router.push("/");
+      const parseAccountId = (value: string) => {
+        const trimmed = value.trim();
+        if (!trimmed) return null;
+        if (trimmed.startsWith("acc-")) {
+          const rawId = Number(trimmed.replace("acc-", ""));
+          return Number.isFinite(rawId) ? rawId : null;
         }
+        try {
+          const decoded = atob(trimmed);
+          if (decoded.startsWith("acc-")) {
+            const rawId = Number(decoded.replace("acc-", ""));
+            return Number.isFinite(rawId) ? rawId : null;
+          }
+          const decodedNumber = Number(decoded);
+          return Number.isFinite(decodedNumber) ? decodedNumber : null;
+        } catch (error) {
+          const numeric = Number(trimmed);
+          return Number.isFinite(numeric) ? numeric : null;
+        }
+      };
+
+      const fromId = parseAccountId(data.senderBank);
+      const toId = parseAccountId(data.sharableId);
+      const amount = Number(data.amount);
+
+      if (!fromId || !toId || !Number.isFinite(amount) || amount <= 0) {
+        throw new Error("Please enter valid transfer details.");
       }
+
+      await transferFunds({ fromId, toId, amount });
+
+      form.reset();
+      setStatusMessage("Transfer submitted successfully.");
+      setStatusType("success");
+      router.refresh();
     } catch (error) {
-      console.error("Submitting create transfer request failed: ", error);
+      console.error("Submitting transfer request failed: ", error);
+      setStatusMessage(
+        error instanceof Error
+          ? error.message
+          : "Transfer failed. Please try again."
+      );
+      setStatusType("error");
     }
 
     setIsLoading(false);
@@ -124,6 +133,18 @@ const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
             </FormItem>
           )}
         />
+
+        {statusMessage && (
+          <p
+            className={
+              statusType === "success"
+                ? "mt-4 text-14 font-medium text-green-600"
+                : "mt-4 text-14 font-medium text-red-600"
+            }
+          >
+            {statusMessage}
+          </p>
+        )}
 
         <FormField
           control={form.control}

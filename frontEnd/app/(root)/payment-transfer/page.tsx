@@ -1,18 +1,28 @@
+"use client";
+
 import HeaderBox from '@/components/HeaderBox'
 import PaymentTransferForm from '@/components/PaymentTransferForm'
 import { getAccounts } from '@/lib/actions/bank.actions';
-import { getLoggedInUser } from '@/lib/actions/user.actions';
-import React from 'react'
+import { useEffect, useState } from 'react'
 
-const Transfer = async () => {
-  const loggedIn = await getLoggedInUser();
-  const accounts = await getAccounts({ 
-    userId: loggedIn.$id 
-  })
+const Transfer = () => {
+  const [accounts, setAccounts] = useState<Account[]>([]);
 
-  if(!accounts) return;
-  
-  const accountsData = accounts?.data;
+  useEffect(() => {
+    let isActive = true;
+
+    const loadAccounts = async () => {
+      const accountsResponse = await getAccounts();
+      if (!isActive) return;
+      setAccounts(accountsResponse?.data ?? []);
+    };
+
+    loadAccounts().catch((error) => console.error("Failed to load accounts:", error));
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   return (
     <section className="payment-transfer">
@@ -22,7 +32,7 @@ const Transfer = async () => {
       />
 
       <section className="size-full pt-5">
-        <PaymentTransferForm accounts={accountsData} />
+        <PaymentTransferForm accounts={accounts} />
       </section>
     </section>
   )

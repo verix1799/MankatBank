@@ -1,4 +1,4 @@
-import { DEMO_MODE, demoUser } from "@/lib/demo";
+"use client";
 
 import HeaderBox from '@/components/HeaderBox'
 import RecentTransactions from '@/components/RecentTransactions';
@@ -6,20 +6,62 @@ import RightSidebar from '@/components/RightSidebar';
 import TotalBalanceBox from '@/components/TotalBalanceBox';
 import { getAccount, getAccounts } from '@/lib/actions/bank.actions';
 import { getLoggedInUser } from '@/lib/actions/user.actions';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
-const Home = async ({ searchParams: { id, page } }: SearchParamProps) => {
-  const currentPage = Number(page as string) || 1;
-  const loggedIn = DEMO_MODE ? demoUser : await getLoggedInUser();
-  const accounts = await getAccounts({ 
-    userId: loggedIn.$id 
-  })
+const Home = () => {
+  const searchParams = useSearchParams();
+  const currentPage = Number(searchParams.get("page") || 1);
+  const id = searchParams.get("id");
 
-  if(!accounts) return;
-  
-  const accountsData = accounts?.data;
-  const appwriteItemId = (id as string) || accountsData[0]?.appwriteItemId;
+  const [user, setUser] = useState<User | null>(null);
+  const [accountsSummary, setAccountsSummary] = useState<{
+    data: Account[];
+    totalBanks: number;
+    totalCurrentBalance: number;
+  } | null>(null);
+  const [accountDetails, setAccountDetails] = useState<{
+    data: Account | null;
+    transactions: Transaction[];
+  } | null>(null);
 
-  const account = await getAccount({ appwriteItemId })
+  useEffect(() => {
+    setUser(getLoggedInUser());
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadAccounts = async () => {
+      const accounts = await getAccounts();
+      if (!isActive) return;
+      setAccountsSummary(accounts);
+
+      const accountsData = accounts?.data ?? [];
+      const appwriteItemId = id || accountsData[0]?.appwriteItemId;
+
+      if (!appwriteItemId) {
+        setAccountDetails({ data: null, transactions: [] });
+        return;
+      }
+
+      const account = await getAccount({ appwriteItemId });
+      if (!isActive) return;
+      setAccountDetails(account);
+    };
+
+    loadAccounts().catch((error) => console.error("Failed to load accounts:", error));
+
+    return () => {
+      isActive = false;
+    };
+  }, [id]);
+
+  const accountsData = accountsSummary?.data ?? [];
+  const appwriteItemId = useMemo(
+    () => id || accountsData[0]?.appwriteItemId,
+    [accountsData, id]
+  );
 
   return (
     <section className="home">
@@ -28,28 +70,28 @@ const Home = async ({ searchParams: { id, page } }: SearchParamProps) => {
           <HeaderBox 
             type="greeting"
             title="Welcome"
-            user={loggedIn?.firstName || 'Guest'}
+            user={user?.firstName || 'Guest'}
             subtext="Access and manage your account and transactions efficiently."
           />
 
           <TotalBalanceBox 
             accounts={accountsData}
-            totalBanks={accounts?.totalBanks}
-            totalCurrentBalance={accounts?.totalCurrentBalance}
+            totalBanks={accountsSummary?.totalBanks ?? 0}
+            totalCurrentBalance={accountsSummary?.totalCurrentBalance ?? 0}
           />
         </header>
 
         <RecentTransactions 
           accounts={accountsData}
-          transactions={account?.transactions}
-          appwriteItemId={appwriteItemId}
+          transactions={accountDetails?.transactions ?? []}
+          appwriteItemId={appwriteItemId || ""}
           page={currentPage}
         />
       </div>
 
       <RightSidebar 
-        user={loggedIn}
-        transactions={account?.transactions}
+        user={user ?? undefined}
+        transactions={accountDetails?.transactions ?? []}
         banks={accountsData?.slice(0, 2)}
       />
     </section>
