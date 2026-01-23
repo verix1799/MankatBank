@@ -118,3 +118,31 @@ export const transferFunds = async ({
     body: JSON.stringify({ fromId, toId, amount }),
   });
 };
+
+export const depositFunds = async ({
+  accountId,
+  amount,
+}: {
+  accountId: number;
+  amount: number;
+}) => {
+  await apiJsonNoBody(`/accounts/${accountId}/deposit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ amount }),
+  });
+};
+
+export const withdrawFunds = async ({
+  accountId,
+  amount,
+}: {
+  accountId: number;
+  amount: number;
+}) => {
+  await apiJsonNoBody(`/accounts/${accountId}/withdraw`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ amount }),
+  });
+};
