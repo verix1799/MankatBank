@@ -1,3 +1,4 @@
+
 package com.myownspringapp.mankatbank.config;
 
 import org.springframework.context.annotation.Bean;
@@ -14,10 +15,10 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins("http://localhost:3000")
+                        // ✅ Allow local dev + all GitHub Codespaces frontends
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
-                        .allowCredentials(false);
+                        .allowCredentials(false); // ✅ correct for Bearer token (JWT)
             }
         };
     }

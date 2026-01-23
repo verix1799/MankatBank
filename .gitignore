@@ -19,3 +19,4 @@ application-local.properties
 
 # Logs
 *.log
+.vscode/
