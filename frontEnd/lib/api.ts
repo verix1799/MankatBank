@@ -1,5 +1,5 @@
 
-// lib/api.ts
+// frontEnd/lib/api.ts
 
 // Determine API_BASE dynamically
 const getApiBase = (): string => {
@@ -33,9 +33,9 @@ const API_BASE = getApiBase();
 /**
  * Ensure path starts with a single leading slash.
  * Examples:
- *  normalizePath("users")      -> "/users"
- *  normalizePath("/users")     -> "/users"
- *  normalizePath("//users")    -> "/users"
+ *  normalizePath("users")   -> "/users"
+ *  normalizePath("/users")  -> "/users"
+ *  normalizePath("//users") -> "/users"
  */
 const normalizePath = (path: string) => `/${path}`.replace(/\/{2,}/g, "/");
 
@@ -63,7 +63,7 @@ export const apiFetch = async (
 
   const url = `${API_BASE}${normalizedPath}`;
 
-  // Optional debug hook (remove in prod)
+  // Optional debug hook (leave commented in prod)
   if (typeof window !== "undefined" && !(window as any).__API_BASE_DEBUG__) {
     (window as any).__API_BASE_DEBUG__ = API_BASE;
     // console.log("API_BASE:", API_BASE);
@@ -103,4 +103,5 @@ export const apiJsonNoBody = async (
     const message = await res.text().catch(() => "");
     throw new Error(`API ${path} failed: ${res.status} ${message}`);
   }
+  return;
 };
