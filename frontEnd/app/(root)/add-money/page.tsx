@@ -37,6 +37,8 @@ const AddMoneyPage = () => {
   const [amount, setAmount] = useState("");
   const [amountError, setAmountError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedBankId, setSelectedBankId] = useState<string>("");
+  const [depositError, setDepositError] = useState<string | null>(null);
 
   useEffect(() => {
     setUser(getLoggedInUser());
@@ -54,6 +56,15 @@ const AddMoneyPage = () => {
     loadAccounts().catch((error) =>
       console.error("Failed to load accounts:", error)
     );
+    // Preselect last used bank for deposit
+    if (typeof window !== "undefined") {
+      const lastId = localStorage.getItem("lastDepositBankId");
+      if (lastId && accounts.find(a => a.id === lastId)) {
+        setSelectedBankId(lastId);
+      } else if (accounts.length > 0) {
+        setSelectedBankId(accounts[0].id);
+      }
+    }
 
     return () => {
       isActive = false;
@@ -112,48 +123,56 @@ const AddMoneyPage = () => {
     });
     setAmount("");
     setAmountError(null);
+    setDepositError(null);
+    // Preselect last used bank for deposit
+    if (type === "deposit" && typeof window !== "undefined") {
+      const lastId = localStorage.getItem("lastDepositBankId");
+      if (lastId && accounts.find(a => a.id === lastId)) {
+        setSelectedBankId(lastId);
+      } else if (accounts.length > 0) {
+        setSelectedBankId(accounts[0].id);
+      } else {
+        setSelectedBankId("");
+      }
+    }
   };
 
   const handleSubmitMoneyAction = async () => {
     if (!moneyModal) return;
-
+    setDepositError(null);
     const numericAmount = Number(amount);
     if (!Number.isFinite(numericAmount)) {
       setAmountError("Enter a valid number.");
       return;
     }
-
     if (numericAmount <= 0) {
       setAmountError("Amount must be greater than 0.");
       return;
     }
-
     if (numericAmount > 1000) {
       setAmountError("Amount must be 1000 or less.");
       return;
     }
-
-    const accountId = Number(currentAccount?.id);
-    if (!Number.isFinite(accountId)) {
+    if (!selectedBankId) {
       setAmountError("Select an account to continue.");
       return;
     }
-
     setIsSubmitting(true);
     setAmountError(null);
-
     try {
       if (moneyModal.type === "deposit") {
-        await depositFunds({ accountId, amount: numericAmount });
+        await depositFunds({ accountId: Number(selectedBankId), amount: numericAmount });
+        if (typeof window !== "undefined") {
+          localStorage.setItem("lastDepositBankId", selectedBankId);
+        }
       } else {
-        await withdrawFunds({ accountId, amount: numericAmount });
+        await withdrawFunds({ accountId: Number(selectedBankId), amount: numericAmount });
       }
-
       setMoneyModal(null);
       setAmount("");
     } catch (error) {
       console.error("Failed to submit money action:", error);
-      setAmountError("Something went wrong. Please try again.");
+      setDepositError("Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -294,6 +313,33 @@ const AddMoneyPage = () => {
       {activeBank ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+            {/* Compact selector for multiple accounts */}
+            {accounts.length > 1 && (
+              <div className="mb-4 flex items-center gap-2">
+                <label htmlFor="bank-switcher" className="text-14 font-medium text-gray-700">Switch account:</label>
+                <select
+                  id="bank-switcher"
+                  className="rounded border border-gray-300 px-2 py-1 text-14"
+                  value={activeBank.id}
+                  onChange={e => {
+                    const next = accounts.find(a => a.id === e.target.value);
+                    if (next) setActiveBank({
+                      id: next.id,
+                      name: next.officialName || next.name,
+                      accountName: next.name,
+                      sortCode: next.sortCode || "",
+                      accountNumber: next.accountNumber || "",
+                    });
+                  }}
+                >
+                  {accounts.map(account => (
+                    <option key={account.id} value={account.id}>
+                      {account.officialName || account.name} (••••{String(account.mask).slice(-4)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-20 font-semibold text-gray-900">
@@ -311,9 +357,8 @@ const AddMoneyPage = () => {
                 Close
               </button>
             </div>
-
             <div className="mt-6 space-y-4">
-              {[
+              {[ 
                 { label: "Account name", value: activeBank.accountName },
                 { label: "Sort code", value: activeBank.sortCode },
                 { label: "Account number", value: activeBank.accountNumber },
@@ -372,12 +417,33 @@ const AddMoneyPage = () => {
                 Close
               </button>
             </div>
-
             <div className="mt-6 space-y-4">
+              {/* Deposit account selector */}
+              {moneyModal.type === "deposit" && (
+                <div className="flex flex-col gap-2">
+                  <label className="text-14 font-medium text-gray-700">Select account</label>
+                  {accounts.length === 0 ? (
+                    <div className="flex flex-col gap-2 p-4 rounded-xl border border-gray-200 bg-gray-50">
+                      <p className="text-14 text-gray-500">No bank accounts connected. Connect a bank to deposit funds.</p>
+                      <Link href="/my-banks/connect" className="text-blue-600 underline">Connect a bank</Link>
+                    </div>
+                  ) : (
+                    <select
+                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-14 text-gray-900 focus:border-blue-500 focus:outline-none"
+                      value={selectedBankId}
+                      onChange={e => setSelectedBankId(e.target.value)}
+                    >
+                      {accounts.map(account => (
+                        <option key={account.id} value={account.id}>
+                          {account.officialName || account.name} — £{account.currentBalance?.toLocaleString()} (••••{String(account.mask).slice(-4)})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
               <div className="flex flex-col gap-2">
-                <label className="text-14 font-medium text-gray-700">
-                  Amount
-                </label>
+                <label className="text-14 font-medium text-gray-700">Amount</label>
                 <input
                   type="number"
                   min="0"
@@ -386,25 +452,23 @@ const AddMoneyPage = () => {
                   onChange={(event) => setAmount(event.target.value)}
                   className="w-full rounded-xl border border-gray-200 px-4 py-3 text-14 text-gray-900 focus:border-blue-500 focus:outline-none"
                   placeholder="0.00"
+                  disabled={accounts.length === 0}
                 />
                 {amountError ? (
-                  <p className="text-12 font-medium text-red-500">
-                    {amountError}
-                  </p>
+                  <p className="text-12 font-medium text-red-500">{amountError}</p>
+                ) : null}
+                {depositError ? (
+                  <p className="text-12 font-medium text-red-500">{depositError}</p>
                 ) : null}
               </div>
-
               <button
                 type="button"
                 onClick={handleSubmitMoneyAction}
-                disabled={isSubmitting}
+                disabled={isSubmitting || accounts.length === 0 || !selectedBankId || Number(amount) <= 0 || Number(amount) > 1000}
                 className="w-full rounded-full bg-bank-gradient px-4 py-3 text-14 font-semibold text-white shadow-form transition disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {isSubmitting
-                  ? "Processing..."
-                  : `${moneyModal.label} funds`}
+                {isSubmitting ? "Processing..." : `${moneyModal.label} funds`}
               </button>
-
               <button
                 type="button"
                 onClick={() => setMoneyModal(null)}

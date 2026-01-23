@@ -2,17 +2,13 @@
 
 import CountUp from 'react-countup';
 
-const AnimatedCounter = ({ amount }: { amount: number }) => {
+import { formatAmount } from "@/lib/utils";
+const AnimatedCounter = ({ amount, currency = "GBP" }: { amount: number, currency?: string }) => {
   return (
     <div className="w-full">
-      <CountUp 
-        decimals={2}
-        decimal=","
-        prefix="$"
-        end={amount} 
-      />
+      {formatAmount(amount, currency)}
     </div>
-  )
+  );
 }
 
 export default AnimatedCounter

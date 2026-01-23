@@ -1,40 +1,32 @@
-import { apiJson, apiJsonNoBody } from "@/lib/api";
+import { getAccounts as getDemoAccounts, setAccounts, updateBalance } from "@/lib/demoBanks";
 import { parseStringify } from "../utils";
 
-// This UI expects "accounts summary" shaped like:
-// { data: AccountUI[], totalBanks: number, totalCurrentBalance: number }
-export const getAccounts = async ({ userId }: any = {}) => {
-  try {
-    const accounts = await apiJson<Array<{
-      id: number;
-      ownerName: string;
-      balance: number;
-    }>>("/accounts", { cache: "no-store" });
-
-    const data = accounts.map((a) => ({
-      id: String(a.id),
-      availableBalance: a.balance,
-      currentBalance: a.balance,
-      institutionId: "mankatbank",
-      name: `${a.ownerName}'s Account`,
-      officialName: "MankatBank Account",
-      mask: String(a.id).padStart(4, "0"),
-      type: "depository",
-      subtype: "checking",
-      appwriteItemId: `acc-${a.id}`,
-      shareableId: `acc-${a.id}`,
-    }));
-
-    return parseStringify({
-      data,
-      totalBanks: data.length,
-      totalCurrentBalance: data.reduce((t, x) => t + (x.currentBalance ?? 0), 0),
-    });
-  } catch (error) {
-    console.error("Error getting accounts from Spring:", error);
-    // Return an empty state instead of crashing the UI
-    return parseStringify({ data: [], totalBanks: 0, totalCurrentBalance: 0 });
-  }
+// Demo: getAccounts reads from localStorage, seeds if missing
+export const getAccounts = async () => {
+  const accounts = getDemoAccounts();
+  // Adapt to app's expected shape
+  const data = accounts.map((a) => ({
+    id: a.id,
+    bankName: a.bankName,
+    masked: a.masked,
+    currentBalance: a.currentBalance,
+    currency: a.currency,
+    // for compatibility with UI
+    availableBalance: a.currentBalance,
+    institutionId: "demo",
+    name: a.bankName,
+    officialName: a.bankName,
+    mask: a.masked,
+    type: "depository",
+    subtype: "checking",
+    appwriteItemId: a.id,
+    shareableId: a.id,
+  }));
+  return {
+    data,
+    totalBanks: data.length,
+    totalCurrentBalance: data.reduce((t, x) => t + (x.currentBalance ?? 0), 0),
+  };
 };
 
 // This UI expects single account shaped like:
@@ -119,30 +111,10 @@ export const transferFunds = async ({
   });
 };
 
-export const depositFunds = async ({
-  accountId,
-  amount,
-}: {
-  accountId: number;
-  amount: number;
-}) => {
-  await apiJsonNoBody(`/accounts/${accountId}/deposit`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ amount }),
-  });
+// Demo: deposit/withdraw update localStorage
+export const depositFunds = async ({ accountId, amount }: { accountId: string; amount: number }) => {
+  updateBalance(accountId, amount);
 };
-
-export const withdrawFunds = async ({
-  accountId,
-  amount,
-}: {
-  accountId: number;
-  amount: number;
-}) => {
-  await apiJsonNoBody(`/accounts/${accountId}/withdraw`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ amount }),
-  });
+export const withdrawFunds = async ({ accountId, amount }: { accountId: string; amount: number }) => {
+  updateBalance(accountId, -amount);
 };
