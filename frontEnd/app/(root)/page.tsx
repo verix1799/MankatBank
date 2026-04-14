@@ -81,7 +81,11 @@ const Home = () => {
           />
         </header>
 
-        <RecentTransactions 
+        <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+          <strong>Personal project demo</strong> — this is not a real bank. Every new account starts with a fake £1,000 to test transfers, deposits, and withdrawals.
+        </div>
+
+        <RecentTransactions
           accounts={accountsData}
           transactions={accountDetails?.transactions ?? []}
           appwriteItemId={appwriteItemId || ""}

@@ -4,7 +4,7 @@ const WALLET_KEY = 'demo.wallet';
 const WALLET_SEED = {
   id: 'wallet',
   name: 'MankatBank',
-  balance: 0,
+  balance: 1000,
   currency: 'GBP',
 };
 

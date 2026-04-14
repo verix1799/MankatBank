@@ -52,9 +52,10 @@ public class AuthController {
         User user = new User(request.email(), request.fullName(), hash);
         User savedUser = userRepository.save(user);
 
-        // create default account for the user
+        // create default account for the user, seeded with £1000 for testing
         Account account = new Account(savedUser.getFullName());
         account.setUser(savedUser);
+        account.deposit(1000L);
         accountRepository.save(account);
 
         return new UserResponse(savedUser.getId(), savedUser.getEmail(), savedUser.getFullName());
